@@ -1,1 +1,45 @@
-placeholder
+name: CI Lab Verification
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Deploy CentOS Topology
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      - name: Wait for systemd initialization
+        run: |
+          docker exec Host systemctl is-system-running --wait || true
+          docker exec Httpserver systemctl is-system-running --wait || true
+          docker exec nfsserver systemctl is-system-running --wait || true
+
+      - name: Provision Storage Server (nfsserver)
+        run: |
+          docker exec nfsserver bash -c "$(cat scripts/setup-storage.sh)"
+
+      - name: Provision Web Server (Httpserver)
+        run: |
+          docker exec Httpserver bash -c "$(cat scripts/setup-web.sh)"
+
+      - name: Verification Checks
+        run: |
+          echo "=== 1. Test Web Server Port-Forward ==="
+          curl -sSf http://localhost:8080 | grep "Shared NFS Asset verified"
+
+          echo "=== 2. Test Internal Ingress from Host -> Httpserver ==="
+          docker exec Host curl -sSf http://172.20.0.20 | grep "Shared NFS Asset verified"
+
+          echo "=== 3. Verify Active Mount on Httpserver ==="
+          docker exec Httpserver df -h | grep "172.20.0.30:/mnt/nfs_share"
