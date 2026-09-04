@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  Host:
+    image: quay.io/centos/centos:stream9
+    container_name: Host
+    hostname: Host
+    privileged: true
+    command: ["/usr/sbin/init"]
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - ./scripts:/root/scripts:ro
+    networks:
+      lab_net:
+        ipv4_address: 172.20.0.10
+
+  Httpserver:
+    image: quay.io/centos/centos:stream9
+    container_name: Httpserver
+    hostname: Httpserver
+    privileged: true
+    command: ["/usr/sbin/init"]
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    ports:
+      - "8080:80"
+    networks:
+      lab_net:
+        ipv4_address: 172.20.0.20
+
+  nfsserver:
+    image: quay.io/centos/centos:stream9
+    container_name: nfsserver
+    hostname: nfsserver
+    privileged: true
+    command: ["/usr/sbin/init"]
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+    networks:
+      lab_net:
+        ipv4_address: 172.20.0.30
+
+networks:
+  lab_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
